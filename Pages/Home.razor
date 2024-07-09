@@ -1,0 +1,103 @@
+﻿@page "/"
+@inject IJSRuntime JS
+
+<div class="max-w-lg mx-auto p-6 bg-white shadow-xl rounded-lg mt-10">
+    <div class="flex justify-between items-center mb-4">
+        <input type="text" class="text-2xl font-semibold p-4 w-full rounded-none border-0 focus:ring-0" value="@_generatedPassword" readonly aria-label="Generated Password" />
+        <div class="flex items-center space-x-2 ml-2">
+            <button class="p-2 hover:bg-red-200 rounded" @onclick="GeneratePassword" aria-label="Generate New Password">
+                <img src="icons/refresh-icon.svg" alt="Refresh" class="w-12 h-12" />
+            </button>
+            <button class="p-2 hover:bg-red-200 rounded" @onclick="CopyPasswordAsync" aria-label="Copy Password">
+                <img src="icons/copy-icon.svg" alt="Copy" class="w-12 h-12" />
+            </button>
+        </div>
+    </div>
+    <div>
+        <label class="block mb-2 font-bold text-lg">Parolayı özelleştir</label>
+        <div class="mb-4">
+            <label for="passwordLength">Parola uzunluğu</label>
+            <input type="range" id="passwordLength" min="8" max="20" step="1" 
+                   value="@_passwordLength"
+                   @oninput="OnPasswordLengthChanged"
+                   class="w-full mt-2 range-slider" />
+            <div class="text-center mt-2">@_passwordLength</div>
+        </div>
+        @foreach (var option in _passwordOptions)
+        {
+            <div class="flex items-center mb-4">
+                <input type="checkbox" id="@option.Id" @bind="option.IsIncluded" @bind:after="GeneratePassword" class="hidden" />
+                <label for="@option.Id" class="flex items-center cursor-pointer">
+                    <span class="w-6 h-6 inline-block mr-2 border rounded bg-white shadow-inner transition-all duration-200 ease-in-out"></span>
+                    @option.Label
+                </label>
+            </div>
+        }
+    </div>
+    <button class="p-2 bg-red-500 text-white rounded w-full hover:bg-red-400" @onclick="CopyPasswordAsync">Parolayı kopyala</button>
+</div>
+
+@code {
+    private const string Upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private const string Lower = "abcdefghijklmnopqrstuvwxyz";
+    private const string Numbers = "0123456789";
+    private const string Symbols = "!@#$%^&*()_+-=[]{}|;:',.<>?";
+
+    private int _passwordLength = 14;
+    private string _generatedPassword = string.Empty;
+
+    private readonly List<PasswordOption> _passwordOptions =
+    [
+        new PasswordOption { Id = "uppercase", Label = "Büyük harf", IsIncluded = true, CharSet = Upper },
+        new PasswordOption { Id = "lowercase", Label = "Küçük harf", IsIncluded = true, CharSet = Lower },
+        new PasswordOption { Id = "numbers", Label = "Rakam", IsIncluded = true, CharSet = Numbers },
+        new PasswordOption { Id = "symbols", Label = "Özel karakter", IsIncluded = true, CharSet = Symbols }
+    ];
+
+    protected override void OnInitialized()
+    {
+        GeneratePassword();
+    }
+
+    private void GeneratePassword()
+    {
+        var allChars = string.Concat(_passwordOptions.Where(o => o.IsIncluded).Select(o => o.CharSet));
+        if (string.IsNullOrEmpty(allChars))
+        {
+            _generatedPassword = "Lütfen en az bir seçim yapın.";
+            return;
+        }
+        var random = new Random();
+        _generatedPassword = new string(Enumerable.Repeat(allChars, _passwordLength)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    private async Task UpdateRangeBackground()
+    {
+        var percentage = (_passwordLength - 8) * 100 / (20 - 8);
+        await JS.InvokeVoidAsync("updateRangeBackground", ".range-slider", percentage);
+    }
+
+    private async Task OnPasswordLengthChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            _passwordLength = value;
+            await UpdateRangeBackground();
+            GeneratePassword();
+        }
+    }
+
+    private async Task CopyPasswordAsync()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _generatedPassword);
+    }
+
+    private class PasswordOption
+    {
+        public required string Id { get; init; }
+        public required string Label { get; init; }
+        public bool IsIncluded { get; set; }
+        public required string CharSet { get; init; }
+    }
+}
