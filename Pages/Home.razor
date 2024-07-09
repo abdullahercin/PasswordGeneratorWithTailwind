@@ -80,7 +80,7 @@
 
     private async Task OnPasswordLengthChanged(ChangeEventArgs e)
     {
-        if (int.TryParse(e.Value?.ToString(), out int value))
+        if (int.TryParse(e.Value?.ToString(), out var value))
         {
             _passwordLength = value;
             await UpdateRangeBackground();
