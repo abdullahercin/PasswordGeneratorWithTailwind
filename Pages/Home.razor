@@ -1,5 +1,14 @@
 ﻿@page "/"
+@using PasswordGeneratorWithTailwind.Memento
+@using PasswordGeneratorWithTailwind.Models
+@using PasswordGeneratorWithTailwind.Services
+
 @inject IJSRuntime JS
+@inject IPasswordGeneratorService _passwordGeneratorService
+@inject IPasswordOptionsService _passwordOptionsService
+@inject PasswordCaretaker _caretaker
+
+<PageTitle>Password Generate With Tailwind and Memento</PageTitle>
 
 <div class="max-w-lg mx-auto p-6 bg-white shadow-xl rounded-lg mt-10">
     <div class="flex justify-between items-center mb-4">
@@ -10,6 +19,12 @@
             </button>
             <button class="p-2 hover:bg-red-200 rounded" @onclick="CopyPasswordAsync" aria-label="Copy Password">
                 <img src="icons/copy-icon.svg" alt="Copy" class="w-12 h-12" />
+            </button>
+            <button class="p-2 hover:bg-red-200 rounded" @onclick="UndoPassword" disabled="@(!CanUndo)" aria-label="Undo Password">
+                <img src="icons/undo-icon.svg" alt="Refresh" class="w-12 h-12" />
+            </button>
+            <button class="p-2 hover:bg-red-200 rounded" @onclick="RedoPassword" disabled="@(!CanRedo)" aria-label="Redo Password">
+                <img src="icons/redo-icon.svg" alt="Copy" class="w-12 h-12" />
             </button>
         </div>
     </div>
@@ -38,28 +53,20 @@
 </div>
 
 @code {
-    private const string Upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private const string Lower = "abcdefghijklmnopqrstuvwxyz";
-    private const string Numbers = "0123456789";
-    private const string Symbols = "!@#$%^&*()_+-=[]{}|;:',.<>?";
-
     private int _passwordLength = 14;
     private string _generatedPassword = string.Empty;
+    private IReadOnlyList<PasswordOption> _passwordOptions = new List<PasswordOption>();
 
-    private readonly List<PasswordOption> _passwordOptions =
-    [
-        new PasswordOption { Id = "uppercase", Label = "Büyük harf", IsIncluded = true, CharSet = Upper },
-        new PasswordOption { Id = "lowercase", Label = "Küçük harf", IsIncluded = true, CharSet = Lower },
-        new PasswordOption { Id = "numbers", Label = "Rakam", IsIncluded = true, CharSet = Numbers },
-        new PasswordOption { Id = "symbols", Label = "Özel karakter", IsIncluded = true, CharSet = Symbols }
-    ];
-
-    protected override void OnInitialized()
+    private bool CanUndo => _caretaker!.CanUndo();
+    private bool CanRedo => _caretaker!.CanRedo();
+    
+    protected override async Task OnInitializedAsync()
     {
-        GeneratePassword();
+        _passwordOptions = _passwordOptionsService.GetPasswordOptions();
+        await GeneratePassword();
     }
 
-    private void GeneratePassword()
+    private async Task GeneratePassword()
     {
         var allChars = string.Concat(_passwordOptions.Where(o => o.IsIncluded).Select(o => o.CharSet));
         if (string.IsNullOrEmpty(allChars))
@@ -67,11 +74,42 @@
             _generatedPassword = "Lütfen en az bir seçim yapın.";
             return;
         }
-        var random = new Random();
-        _generatedPassword = new string(Enumerable.Repeat(allChars, _passwordLength)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+        try
+        {
+            _generatedPassword = await _passwordGeneratorService.GeneratePasswordAsync(allChars, _passwordLength);
+            await _caretaker.BackupAsync(_generatedPassword);
+        }
+        catch (Exception ex)
+        {
+            _generatedPassword= ex.Message;
+        }
     }
 
+    private async Task UndoPassword()
+    {
+        if (_caretaker.CanUndo())
+        {
+            _generatedPassword = await _caretaker.UndoAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RedoPassword()
+    {
+        if (_caretaker.CanRedo())
+        {
+            _generatedPassword = await _caretaker.RedoAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyPasswordAsync()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _generatedPassword);
+    }
+    
+    #region Range Bar Change Metods
     private async Task UpdateRangeBackground()
     {
         var percentage = (_passwordLength - 8) * 100 / (20 - 8);
@@ -84,20 +122,8 @@
         {
             _passwordLength = value;
             await UpdateRangeBackground();
-            GeneratePassword();
+            await GeneratePassword();
         }
     }
-
-    private async Task CopyPasswordAsync()
-    {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _generatedPassword);
-    }
-
-    private class PasswordOption
-    {
-        public required string Id { get; init; }
-        public required string Label { get; init; }
-        public bool IsIncluded { get; set; }
-        public required string CharSet { get; init; }
-    }
+    #endregion Range Bar Change Metods
 }
