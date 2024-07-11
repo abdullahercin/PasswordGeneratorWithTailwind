@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using PasswordGeneratorWithTailwind.Components
 @using PasswordGeneratorWithTailwind.Memento
 @using PasswordGeneratorWithTailwind.Models
 @using PasswordGeneratorWithTailwind.Services
@@ -12,36 +13,57 @@
 
 <div class="max-w-lg mx-auto p-6 bg-white shadow-xl rounded-lg mt-10">
     <div class="flex justify-between items-center mb-4">
-        <input type="text" class="text-2xl font-semibold p-4 w-full rounded-none border-0 focus:ring-0" value="@_generatedPassword" readonly aria-label="Generated Password" />
-        <div class="flex items-center space-x-2 ml-2">
+        <input type="text" class="text-2xl font-semibold p-4 w-full rounded-none border-0 focus:ring-0" value="@_generatedPassword" readonly aria-label="Generated Password"/>
+        <div class="relative inline-block group">
             <button class="p-2 hover:bg-red-200 rounded" @onclick="GeneratePassword" aria-label="Generate New Password">
-                <img src="icons/refresh-icon.svg" alt="Refresh" class="w-12 h-12" />
+                <img src="icons/refresh-icon.svg" alt="Refresh" class="w-12 h-12"/>
             </button>
+            <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-1">
+                Yenile
+            </span>
+        </div>
+
+        <div class="relative inline-block group">
             <button class="p-2 hover:bg-red-200 rounded" @onclick="CopyPasswordAsync" aria-label="Copy Password">
-                <img src="icons/copy-icon.svg" alt="Copy" class="w-12 h-12" />
+                <img src="icons/copy-icon.svg" alt="Copy" class="w-12 h-12"/>
             </button>
+            <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-1">
+                Kopyala
+            </span>
+        </div>
+
+        <div class="relative inline-block group">
             <button class="p-2 hover:bg-red-200 rounded" @onclick="UndoPassword" disabled="@(!CanUndo)" aria-label="Undo Password">
-                <img src="icons/undo-icon.svg" alt="Refresh" class="w-12 h-12" />
+                <img src="icons/undo-icon.svg" alt="Refresh" class="w-12 h-12"/>
             </button>
+            <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-1">
+                Geri
+            </span>
+        </div>
+
+        <div class="relative inline-block group">
             <button class="p-2 hover:bg-red-200 rounded" @onclick="RedoPassword" disabled="@(!CanRedo)" aria-label="Redo Password">
-                <img src="icons/redo-icon.svg" alt="Copy" class="w-12 h-12" />
+                <img src="icons/redo-icon.svg" alt="Copy" class="w-12 h-12"/>
             </button>
+            <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-1">
+                İleri
+            </span>
         </div>
     </div>
     <div>
         <label class="block mb-2 font-bold text-lg">Parolayı özelleştir</label>
         <div class="mb-4">
             <label for="passwordLength">Parola uzunluğu</label>
-            <input type="range" id="passwordLength" min="8" max="20" step="1" 
+            <input type="range" id="passwordLength" min="8" max="20" step="1"
                    value="@_passwordLength"
                    @oninput="OnPasswordLengthChanged"
-                   class="w-full mt-2 range-slider" />
+                   class="w-full mt-2 range-slider"/>
             <div class="text-center mt-2">@_passwordLength</div>
         </div>
         @foreach (var option in _passwordOptions)
         {
             <div class="flex items-center mb-4">
-                <input type="checkbox" id="@option.Id" @bind="option.IsIncluded" @bind:after="GeneratePassword" class="hidden" />
+                <input type="checkbox" id="@option.Id" @bind="option.IsIncluded" @bind:after="GeneratePassword" class="hidden"/>
                 <label for="@option.Id" class="flex items-center cursor-pointer">
                     <span class="w-6 h-6 inline-block mr-2 border rounded bg-white shadow-inner transition-all duration-200 ease-in-out"></span>
                     @option.Label
@@ -52,6 +74,8 @@
     <button class="p-2 bg-red-500 text-white rounded w-full hover:bg-red-400" @onclick="CopyPasswordAsync">Parolayı kopyala</button>
 </div>
 
+<SocialMedia/>
+
 @code {
     private int _passwordLength = 14;
     private string _generatedPassword = string.Empty;
@@ -59,7 +83,7 @@
 
     private bool CanUndo => _caretaker!.CanUndo();
     private bool CanRedo => _caretaker!.CanRedo();
-    
+
     protected override async Task OnInitializedAsync()
     {
         _passwordOptions = _passwordOptionsService.GetPasswordOptions();
@@ -82,7 +106,7 @@
         }
         catch (Exception ex)
         {
-            _generatedPassword= ex.Message;
+            _generatedPassword = ex.Message;
         }
     }
 
@@ -108,8 +132,9 @@
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", _generatedPassword);
     }
-    
+
     #region Range Bar Change Metods
+
     private async Task UpdateRangeBackground()
     {
         var percentage = (_passwordLength - 8) * 100 / (20 - 8);
@@ -125,5 +150,7 @@
             await GeneratePassword();
         }
     }
+
     #endregion Range Bar Change Metods
+
 }

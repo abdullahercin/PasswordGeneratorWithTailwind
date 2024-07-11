@@ -13,10 +13,10 @@ public class PasswordOptionsService : IPasswordOptionsService
     {
         return new List<PasswordOption>
         {
-            new PasswordOption { Id = "uppercase", Label = "Büyük harf", IsIncluded = true, CharSet = Upper },
-            new PasswordOption { Id = "lowercase", Label = "Küçük harf", IsIncluded = true, CharSet = Lower },
-            new PasswordOption { Id = "numbers", Label = "Rakam", IsIncluded = true, CharSet = Numbers },
-            new PasswordOption { Id = "symbols", Label = "Özel karakter", IsIncluded = true, CharSet = Symbols }
+            new() { Id = "uppercase", Label = "Büyük harf", IsIncluded = true, CharSet = Upper },
+            new() { Id = "lowercase", Label = "Küçük harf", IsIncluded = true, CharSet = Lower },
+            new() { Id = "numbers", Label = "Rakam", IsIncluded = true, CharSet = Numbers },
+            new() { Id = "symbols", Label = "Özel karakter", IsIncluded = true, CharSet = Symbols }
         };
     }
 }
